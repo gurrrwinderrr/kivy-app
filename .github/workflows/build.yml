@@ -9,24 +9,39 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10.14"
 
-      - name: Set up Java 17
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: temurin
+          java-version: 17
 
-      - name: Install system packages
+      - name: Install system deps
         run: |
           sudo apt update
-          sudo apt install -y zip unzip openjdk-17-jdk wget git build-essential libffi-dev libssl-dev
+          sudo apt install -y unzip zip wget build-essential \
+          libffi-dev libssl-dev openjdk-17-jdk
+
+      - name: Install Android SDK
+        run: |
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          cd $HOME/android-sdk/cmdline-tools
+
+          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip commandlinetools-linux-*.zip
+          mv cmdline-tools latest
+
+          export ANDROID_HOME=$HOME/android-sdk
+          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
       - name: Install Buildozer
         run: |
@@ -34,6 +49,9 @@ jobs:
           pip install buildozer cython
 
       - name: Build APK
+        env:
+          ANDROID_HOME: /home/runner/android-sdk
+          PATH: /home/runner/android-sdk/cmdline-tools/latest/bin:/home/runner/android-sdk/platform-tools:$PATH
         run: |
           buildozer android debug
 
